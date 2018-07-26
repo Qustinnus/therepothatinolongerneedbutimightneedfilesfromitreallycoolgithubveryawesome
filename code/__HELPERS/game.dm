@@ -530,3 +530,97 @@
 	var/pressure = environment.return_pressure()
 	if(pressure <= LAVALAND_EQUIPMENT_EFFECT_PRESSURE)
 		. = TRUE
+
+// Split block - A version of block() that splits it into multiple 32x32 block() calls to allow CHECK_TICK to work
+/datum/sub_turf_block
+	var/x1
+	var/y1
+	var/z1
+	var/x2
+	var/y2
+	var/z2
+
+/datum/sub_turf_block/New(x1, y1, z1, x2, y2, z2)
+	src.x1 = x1
+	src.y1 = y1
+	src.z1 = z1
+	src.x2 = x2
+	src.y2 = y2
+	src.z2 = z2
+
+/datum/sub_turf_block/proc/return_list()
+	return block(locate(x1, y1, z1), locate(x2, y2, z2))
+
+/proc/split_block(turf/T1, turf/T2)
+	var/x1 = min(T1.x, T2.x)
+	var/y1 = min(T1.y, T2.y)
+	var/z1 = min(T1.z, T2.z)
+	var/x2 = max(T1.x, T2.x)
+	var/y2 = max(T1.y, T2.y)
+	var/z2 = max(T1.z, T2.z)
+
+	var/list/sub_blocks = list()
+	for(var/z in z1 to z2)
+		for(var/b_y1 = y1, b_y1 <= y2, b_y1 += 32)
+			for(var/b_x1 = x1, b_x1 <= x2, b_x1 += 32)
+				var/b_x2 = min(b_x1 + 31, x2)
+				var/b_y2 = min(b_y1 + 31, y2)
+				sub_blocks += new /datum/sub_turf_block(b_x1, b_y1, z, b_x2, b_y2, z)
+
+	return sub_blocks
+
+/proc/GeneratePerlinNoise(var/Width, var/Height, var/OctaveCount = 6, var/Amplitude = 0.1, var/Persistence = 0.4)
+	var/list/WhiteNoise = GenerateWhiteNoise(Width, Height)
+
+	var/list/SmoothNoiseList = list()
+	SmoothNoiseList.len = OctaveCount
+	for(var/i in 1 to OctaveCount)
+		SmoothNoiseList[i] = GenerateSmoothNoise(Width, Height, i, WhiteNoise)
+
+	var/list/PerlinNoise = list()
+	PerlinNoise.len = Width * Height
+	var/TotalAmplitude = 0
+
+	for(var/i = OctaveCount, i >= 1, i--) // blend noise together
+		Amplitude *= Persistence
+		TotalAmplitude += Amplitude
+
+		for(var/j in 1 to PerlinNoise.len)
+			PerlinNoise[j] += SmoothNoiseList[i][j] * Amplitude
+
+	for(var/i in 1 to PerlinNoise.len) //Normalization
+		PerlinNoise[i] /= TotalAmplitude
+
+	return PerlinNoise
+
+/proc/GenerateSmoothNoise(var/Width, var/Height, var/Octave, var/WhiteNoise)
+	var/list/Noise = list()
+	Noise.len = Width * Height
+	var/SamplePeriod = Octave ** 2
+	var/SampleFrequency = 1 / SamplePeriod
+	var/NoiseIndex = 1
+
+	for(var/y in 1 to Height)
+		var/SampleY0 = round((y - 1) / SamplePeriod) * SamplePeriod
+		var/SampleY1 = (SampleY0 + SamplePeriod) % Height
+		var/VertBlend = ((y - 1) - SampleY0) * SampleFrequency
+
+		for(var/x in 1 to Width)
+			var/SampleX0 = round((x - 1) / SamplePeriod) * SamplePeriod
+			var/SampleX1 = (SampleX0 + SamplePeriod) % Width
+			var/HorizBlend = ((x - 1) - SampleX0) * SampleFrequency
+
+			var/Top = LERP(WhiteNoise[SampleY0 * Width + SampleX0 + 1], WhiteNoise[SampleY1 * Width + SampleX0 + 1], VertBlend)
+			var/Bottom = LERP(WhiteNoise[SampleY0 * Width + SampleX1 + 1], WhiteNoise[SampleY1 * Width + SampleX1 + 1], VertBlend)
+
+			Noise[NoiseIndex] = LERP(Top, Bottom, HorizBlend)
+			NoiseIndex += 1
+
+	return Noise
+
+/proc/GenerateWhiteNoise(Width, Height)
+	var/list/Noise = list()
+	Noise.len = Width * Height
+	for(var/i in 1 to Noise.len)
+		Noise[i] = rand()
+	return Noise

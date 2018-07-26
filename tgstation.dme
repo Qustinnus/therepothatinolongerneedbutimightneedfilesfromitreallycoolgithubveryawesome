@@ -1770,6 +1770,8 @@
 #include "code\modules\mining\equipment\survival_pod.dm"
 #include "code\modules\mining\equipment\vendor_items.dm"
 #include "code\modules\mining\equipment\wormhole_jaunter.dm"
+#include "code\modules\mining\jungle\biome.dm"
+#include "code\modules\mining\jungle\terrain_generator2.dm"
 #include "code\modules\mining\laborcamp\laborshuttle.dm"
 #include "code\modules\mining\laborcamp\laborstacker.dm"
 #include "code\modules\mining\lavaland\ash_flora.dm"
