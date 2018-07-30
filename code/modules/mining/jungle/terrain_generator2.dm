@@ -10,6 +10,8 @@
 	var/grasslevel = 0.4
 	var/junglelevel = 0.8
 	var/mountainlevel = 1
+	var/area/A
+	var/terrain
 
 /obj/terrain_generator/Initialize()
 	. = ..()
@@ -17,18 +19,21 @@
 	CreateTerrain()
 
 /obj/terrain_generator/proc/CreateTerrain()
-	var/area/A = get_area(src)
-	/*
+	for(var/turf/open/genturf/T in block(locate(1, 1, src.z), locate(255, 255, src.z)))
+		T.alpha = round(noise[T.x + ((T.y-1) * width)] * 255)
+		terrain = GetTerrain(noise[T.x + ((T.y-1) * width)])
+		T.ChangeTurf(GetTerrain(noise[T.x + ((T.y-1) * width)]))
+
+/*
+	A = get_area(src)
 	for(var/turf/open/T in A.contents)
 		to_chat(world, "gay")
 		if(!istype(T, /turf/open/genturf))
 			continue // we only want genturf
-		T.ChangeTurf(GetTerrain(noise[T.x + ((T.y-1) * width)]))
+		T.ChangeTurf(GetTerrain(noise[T.x + ((T.y-1) * width)]))*/
 
-*/
-
-/obj/terrain_generator/proc/GetTerrain(var/x)
-	switch(x)
+/obj/terrain_generator/proc/GetTerrain(perlinnoise)
+	switch(perlinnoise)
 		if(0 to waterlevel)
 			return /turf/open/water
 		if(waterlevel to beachlevel)
