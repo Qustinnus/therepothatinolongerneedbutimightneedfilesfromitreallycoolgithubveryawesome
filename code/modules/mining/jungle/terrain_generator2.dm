@@ -19,10 +19,10 @@
 	CreateTerrain()
 
 /obj/terrain_generator/proc/CreateTerrain()
-	for(var/turf/open/genturf/T in block(locate(1, 1, src.z), locate(255, 255, src.z)))
-		T.alpha = round(noise[T.x + ((T.y-1) * width)] * 255)
-		terrain = GetTerrain(noise[T.x + ((T.y-1) * width)])
+	var/area/A = get_area(src)
+	for(var/turf/open/genturf/T in A.contents)
 		T.ChangeTurf(GetTerrain(noise[T.x + ((T.y-1) * width)]))
+		CHECK_TICK
 
 /*
 	A = get_area(src)
@@ -34,16 +34,19 @@
 
 /obj/terrain_generator/proc/GetTerrain(perlinnoise)
 	switch(perlinnoise)
-		if(0 to waterlevel)
+		if(0 to 0.2)
 			return /turf/open/water
-		if(waterlevel to beachlevel)
+		if(0.2 to 0.3)
 			return /turf/open/floor/plating/asteroid
-		if(beachlevel to grasslevel)
+		if(0.3 to 0.4)
 			return /turf/open/floor/grass
-		if(grasslevel to junglelevel)
+		if(0.4 to 0.7)
 			return /turf/open/floor/plating/dirt
-		if(junglelevel to mountainlevel)
+		if(0.7 to 1)
 			return /turf/closed/mineral/random
+		else
+			CRASH("wrong perlin value of [perlinnoise]")
+
 
 /area/lavaland/surface/outdoors/jungle
 	icon_state = "unexplored"
@@ -53,3 +56,5 @@
 	desc = "If you see this, and you're not a ghost, yell at coders"
 	icon = 'icons/turf/floors/debug.dmi'
 	icon_state = "genturf"
+
+/turf/open/genturf/Initialize()
