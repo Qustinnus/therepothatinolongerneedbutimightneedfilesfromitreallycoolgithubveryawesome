@@ -75,8 +75,14 @@
 	var/automatic = 0 //can gun use it, 0 is no, anything above 0 is the delay between clicks in ds
 	var/pb_knockback = 0
 
+	///If this is true, you will drop the gun after firing it if you are holding it with one hand.
+	var/drop_on_onehanded_fire = FALSE
+	///Scalar ontop of spread, will be multiplied to the spread and recoil variables.
+	var/onehanded_spread_penalty = 1
+
 /obj/item/gun/Initialize()
 	. = ..()
+	AddComponent(/datum/component/two_handed, wielded_afterattack = CALLBACK(src, .proc/wielded_afterattack))
 	if(pin)
 		pin = new pin(src)
 	if(gun_light)
@@ -149,9 +155,9 @@
 	playsound(src, dry_fire_sound, 30, TRUE)
 
 
-/obj/item/gun/proc/shoot_live_shot(mob/living/user, pointblank = 0, atom/pbtarget = null, message = 1)
+/obj/item/gun/proc/shoot_live_shot(mob/living/user, pointblank = 0, atom/pbtarget = null, message = 1, spread_penalty = 1)
 	if(recoil)
-		shake_camera(user, recoil + 1, recoil)
+		shake_camera(user, recoil * spread_penalty + 1, recoil * spread_penalty)
 
 	if(suppressed)
 		playsound(user, suppressed_sound, suppressed_volume, vary_fire_sound, ignore_walls = FALSE)
@@ -178,13 +184,28 @@
 		for(var/obj/O in contents)
 			O.emp_act(severity)
 
-/obj/item/gun/afterattack(atom/target, mob/living/user, flag, params)
+
+///Proc ran if you use the gun while 2 handing.
+/obj/item/gun/proc/wielded_afterattack(obj/item/source, atom/target, mob/user, proximity_flag, click_parameters)
+	prepare_fire(target, user, proximity_flag, click_parameters, onehanded_spread_penalty)
+
+///Runs after you use the gun to fire, only runs if you use one hand.
+/obj/item/gun/afterattack(atom/target, mob/user, proximity_flag, click_parameters)
 	. = ..()
+	if(.) //Our after attack was handled already (Most likely through a signal)
+		return
+	if(!prepare_fire(target,user, proximity_flag, click_parameters)) //Don't bother continueing if we didn't fire
+		return
+	if(weapon_weight == WEAPON_HEAVY) //Heavy weapons gotta be 2-handed
+		to_chat(user, "<span class='warning'>The power of the shot causes [src] to fling out of your hand!</span>")
+		user.dropItemToGround(src, TRUE)
+
+/obj/item/gun/proc/prepare_fire(atom/target, mob/living/user, proximity_flag, click_parameters, spread_penalty = 1)
 	if(!target)
 		return
 	if(firing_burst)
 		return
-	if(flag) //It's adjacent, is the user, or is on the user's person
+	if(proximity_flag) //It's adjacent, is the user, or is on the user's person
 		if(target in user.contents) //can't shoot stuff inside us.
 			return
 		if(!ismob(target) || user.a_intent == INTENT_HARM) //melee attack
@@ -203,9 +224,9 @@
 		if(!can_trigger_gun(L))
 			return
 
-	if(flag)
+	if(proximity_flag)
 		if(user.zone_selected == BODY_ZONE_PRECISE_MOUTH)
-			handle_suicide(user, target, params)
+			handle_suicide(user, target, click_parameters)
 			return
 
 	if(!can_shoot()) //Just because you can pull the trigger doesn't mean it can shoot.
@@ -215,10 +236,7 @@
 	if(check_botched(user))
 		return
 
-	var/obj/item/bodypart/other_hand = user.has_hand_for_held_index(user.get_inactive_hand_index()) //returns non-disabled inactive hands
-	if(weapon_weight == WEAPON_HEAVY && (user.get_inactive_held_item() || !other_hand))
-		to_chat(user, "<span class='warning'>You need two hands to fire [src]!</span>")
-		return
+
 	//DUAL (or more!) WIELDING
 	var/bonus_spread = 0
 	var/loop_counter = 0
@@ -230,9 +248,9 @@
 			else if(G.can_trigger_gun(user))
 				bonus_spread += dual_wield_spread
 				loop_counter++
-				addtimer(CALLBACK(G, /obj/item/gun.proc/process_fire, target, user, TRUE, params, null, bonus_spread), loop_counter)
+				addtimer(CALLBACK(G, /obj/item/gun.proc/process_fire, target, user, TRUE, click_parameters, null, bonus_spread), loop_counter)
 
-	return process_fire(target, user, TRUE, params, null, bonus_spread)
+	return process_fire(target, user, TRUE, click_parameters, null, bonus_spread, spread_penalty)
 
 /obj/item/gun/proc/check_botched(mob/living/user, params)
 	if(clumsy_check)
@@ -263,7 +281,7 @@
 /obj/item/gun/proc/recharge_newshot()
 	return
 
-/obj/item/gun/proc/process_burst(mob/living/user, atom/target, message = TRUE, params=null, zone_override = "", sprd = 0, randomized_gun_spread = 0, randomized_bonus_spread = 0, rand_spr = 0, iteration = 0)
+/obj/item/gun/proc/process_burst(mob/living/user, atom/target, message = TRUE, params=null, zone_override = "", sprd = 0, randomized_gun_spread = 0, randomized_bonus_spread = 0, rand_spr = 0, iteration = 0, spread_penalty = 1)
 	if(!user || !firing_burst)
 		firing_burst = FALSE
 		return FALSE
@@ -277,9 +295,9 @@
 				to_chat(user, "<span class='warning'>[src] is lethally chambered! You don't want to risk harming anyone...</span>")
 				return
 		if(randomspread)
-			sprd = round((rand() - 0.5) * DUALWIELD_PENALTY_EXTRA_MULTIPLIER * (randomized_gun_spread + randomized_bonus_spread))
+			sprd = round(((rand() - 0.5) * DUALWIELD_PENALTY_EXTRA_MULTIPLIER * (randomized_gun_spread + randomized_bonus_spread)) * spread_penalty )
 		else //Smart spread
-			sprd = round((((rand_spr/burst_size) * iteration) - (0.5 + (rand_spr * 0.25))) * (randomized_gun_spread + randomized_bonus_spread))
+			sprd = round(((((rand_spr/burst_size) * iteration) - (0.5 + (rand_spr * 0.25))) * (randomized_gun_spread + randomized_bonus_spread)) * spread_penalty )
 		before_firing(target,user)
 		if(!chambered.fire_casing(target, user, params, ,suppressed, zone_override, sprd, src))
 			shoot_with_empty_chamber(user)
@@ -287,9 +305,9 @@
 			return FALSE
 		else
 			if(get_dist(user, target) <= 1) //Making sure whether the target is in vicinity for the pointblank shot
-				shoot_live_shot(user, 1, target, message)
+				shoot_live_shot(user, 1, target, message, spread_penalty)
 			else
-				shoot_live_shot(user, 0, target, message)
+				shoot_live_shot(user, 0, target, message, spread_penalty)
 			if (iteration >= burst_size)
 				firing_burst = FALSE
 	else
@@ -300,7 +318,7 @@
 	update_icon()
 	return TRUE
 
-/obj/item/gun/proc/process_fire(atom/target, mob/living/user, message = TRUE, params = null, zone_override = "", bonus_spread = 0)
+/obj/item/gun/proc/process_fire(atom/target, mob/living/user, message = TRUE, params = null, zone_override = "", bonus_spread = 0, spread_penalty = 1)
 	if(user)
 		SEND_SIGNAL(user, COMSIG_MOB_FIRED_GUN, user, target, params, zone_override)
 
@@ -321,7 +339,7 @@
 	if(burst_size > 1)
 		firing_burst = TRUE
 		for(var/i = 1 to burst_size)
-			addtimer(CALLBACK(src, .proc/process_burst, user, target, message, params, zone_override, sprd, randomized_gun_spread, randomized_bonus_spread, rand_spr, i), fire_delay * (i - 1))
+			addtimer(CALLBACK(src, .proc/process_burst, user, target, message, params, zone_override, sprd, randomized_gun_spread, randomized_bonus_spread, rand_spr, i, spread_penalty), fire_delay * (i - 1))
 	else
 		if(chambered)
 			if(HAS_TRAIT(user, TRAIT_PACIFISM)) // If the user has the pacifist trait, then they won't be able to fire [src] if the round chambered inside of [src] is lethal.
@@ -335,9 +353,9 @@
 				return
 			else
 				if(get_dist(user, target) <= 1) //Making sure whether the target is in vicinity for the pointblank shot
-					shoot_live_shot(user, 1, target, message)
+					shoot_live_shot(user, 1, target, message, spread_penalty)
 				else
-					shoot_live_shot(user, 0, target, message)
+					shoot_live_shot(user, 0, target, message, spread_penalty)
 		else
 			shoot_with_empty_chamber(user)
 			return

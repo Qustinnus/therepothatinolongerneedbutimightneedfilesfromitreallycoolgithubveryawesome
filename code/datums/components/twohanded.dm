@@ -6,17 +6,30 @@
  */
 /datum/component/two_handed
 	dupe_mode = COMPONENT_DUPE_UNIQUE_PASSARGS 		// Only one of the component can exist on an item
-	var/wielded = FALSE 							/// Are we holding the two handed item properly
-	var/force_multiplier = 0						/// The multiplier applied to force when wielded, does not work with force_wielded, and force_unwielded
-	var/force_wielded = 0	 						/// The force of the item when weilded
-	var/force_unwielded = 0		 					/// The force of the item when unweilded
-	var/wieldsound = FALSE 							/// Play sound when wielded
-	var/unwieldsound = FALSE 						/// Play sound when unwielded
-	var/attacksound = FALSE							/// Play sound on attack when wielded
-	var/require_twohands = FALSE					/// Does it have to be held in both hands
-	var/icon_wielded = FALSE						/// The icon that will be used when wielded
-	var/obj/item/offhand/offhand_item = null		/// Reference to the offhand created for the item
-	var/sharpened_increase = 0						/// The amount of increase recived from sharpening the item
+	/// Are we holding the two handed item properly
+	var/wielded = FALSE
+	/// The multiplier applied to force when wielded, does not work with force_wielded, and force_unwielded
+	var/force_multiplier = 0
+	/// The force of the item when wielded
+	var/force_wielded = 0
+	/// The force of the item when unweilded
+	var/force_unwielded = 0
+	/// Play sound when wielded
+	var/wieldsound = FALSE
+	/// Play sound when unwielded
+	var/unwieldsound = FALSE
+	/// Play sound on attack when wielded
+	var/attacksound = FALSE
+	/// Does it have to be held in both hands
+	var/require_twohands = FALSE
+	/// The icon that will be used when wielded
+	var/icon_wielded = FALSE
+	/// Reference to the offhand created for the item
+	var/obj/item/offhand/offhand_item = null
+	/// The amount of increase recived from sharpening the item
+	var/sharpened_increase = 0
+	/// Callback thats runs during afterattack if the item is wielded.
+	var/datum/callback/wielded_afterattack
 
 /**
  * Two Handed component
@@ -30,9 +43,10 @@
  * * force_wielded (optional) The force setting when the item is wielded, do not use with force_multiplier
  * * force_unwielded (optional) The force setting when the item is unwielded, do not use with force_multiplier
  * * icon_wielded (optional) The icon to be used when wielded
+* * wielded_afterattack (optional) The callback thats runs during afterattack if the item is wielded.
  */
 /datum/component/two_handed/Initialize(require_twohands=FALSE, wieldsound=FALSE, unwieldsound=FALSE, attacksound=FALSE, \
-										force_multiplier=0, force_wielded=0, force_unwielded=0, icon_wielded=FALSE)
+										force_multiplier=1, force_wielded=0, force_unwielded=0, icon_wielded=FALSE, datum/callback/wielded_afterattack)
 	if(!isitem(parent))
 		return COMPONENT_INCOMPATIBLE
 
@@ -44,10 +58,12 @@
 	src.force_wielded = force_wielded
 	src.force_unwielded = force_unwielded
 	src.icon_wielded = icon_wielded
+	src.wielded_afterattack = wielded_afterattack
+
 
 // Inherit the new values passed to the component
 /datum/component/two_handed/InheritComponent(datum/component/two_handed/new_comp, original, require_twohands, wieldsound, unwieldsound, \
-											force_multiplier, force_wielded, force_unwielded, icon_wielded)
+											force_multiplier = 1, force_wielded, force_unwielded, icon_wielded, datum/callback/wielded_attack)
 	if(!original)
 		return
 	if(require_twohands)
@@ -66,6 +82,8 @@
 		src.force_unwielded = force_unwielded
 	if(icon_wielded)
 		src.icon_wielded = icon_wielded
+	if(wielded_attack)
+		src.wielded_afterattack = wielded_afterattack
 
 // register signals withthe parent item
 /datum/component/two_handed/RegisterWithParent()
@@ -76,6 +94,7 @@
 	RegisterSignal(parent, COMSIG_ATOM_UPDATE_ICON, .proc/on_update_icon)
 	RegisterSignal(parent, COMSIG_MOVABLE_MOVED, .proc/on_moved)
 	RegisterSignal(parent, COMSIG_ITEM_SHARPEN_ACT, .proc/on_sharpen)
+	RegisterSignal(parent, COMSIG_ITEM_AFTERATTACK, .proc/afterattack)
 
 // Remove all siginals registered to the parent item
 /datum/component/two_handed/UnregisterFromParent()
@@ -85,7 +104,8 @@
 								COMSIG_ITEM_ATTACK,
 								COMSIG_ATOM_UPDATE_ICON,
 								COMSIG_MOVABLE_MOVED,
-								COMSIG_ITEM_SHARPEN_ACT))
+								COMSIG_ITEM_SHARPEN_ACT,
+								COMSIG_ITEM_AFTERATTACK))
 
 /// Triggered on equip of the item containing the component
 /datum/component/two_handed/proc/on_equip(datum/source, mob/user, slot)
@@ -288,6 +308,10 @@
 		return COMPONENT_BLOCK_SHARPEN_MAXED
 	sharpened_increase = min(amount, (max_amount - wielded_val))
 	return COMPONENT_BLOCK_SHARPEN_APPLIED
+
+/datum/component/two_handed/proc/afterattack(obj/item/source, atom/target, mob/user, proximity_flag, click_parameters)
+	if(wielded_afterattack && wielded)
+		wielded_afterattack.Invoke(source, target, user, proximity_flag, click_parameters)
 
 /**
  * The offhand dummy item for two handed items
