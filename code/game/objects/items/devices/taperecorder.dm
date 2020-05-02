@@ -9,7 +9,7 @@
 	w_class = WEIGHT_CLASS_SMALL
 	flags_1 = HEAR_1
 	slot_flags = ITEM_SLOT_BELT
-	materials = list(MAT_METAL=60, MAT_GLASS=30)
+	custom_materials = list(/datum/material/iron=60, /datum/material/glass=30)
 	force = 2
 	throwforce = 0
 	var/recording = 0
@@ -29,8 +29,8 @@
 
 
 /obj/item/taperecorder/examine(mob/user)
-	..()
-	to_chat(user, "The wire panel is [open_panel ? "opened" : "closed"].")
+	. = ..()
+	. += "The wire panel is [open_panel ? "opened" : "closed"]."
 
 
 /obj/item/taperecorder/attackby(obj/item/I, mob/user, params)
@@ -56,13 +56,9 @@
 
 //ATTACK HAND IGNORING PARENT RETURN VALUE
 /obj/item/taperecorder/attack_hand(mob/user)
-	if(loc == user)
-		if(mytape)
-			if(!user.is_holding(src))
-				return ..()
-			eject(user)
-	else
+	if(loc != user || !mytape || !user.is_holding(src))
 		return ..()
+	eject(user)
 
 /obj/item/taperecorder/proc/can_use(mob/user)
 	if(user && ismob(user))
@@ -83,7 +79,7 @@
 	eject(usr)
 
 
-/obj/item/taperecorder/update_icon()
+/obj/item/taperecorder/update_icon_state()
 	if(!mytape)
 		icon_state = "taperecorder_empty"
 	else if(recording)
@@ -95,6 +91,7 @@
 
 
 /obj/item/taperecorder/Hear(message, atom/movable/speaker, message_langs, raw_message, radio_freq, spans, message_mode)
+	. = ..()
 	if(mytape && recording)
 		mytape.timestamp += mytape.used_capacity
 		mytape.storedinfo += "\[[time2text(mytape.used_capacity * 10,"mm:ss")]\] [message]"
@@ -120,9 +117,7 @@
 		mytape.storedinfo += "\[[time2text(mytape.used_capacity * 10,"mm:ss")]\] Recording started."
 		var/used = mytape.used_capacity	//to stop runtimes when you eject the tape
 		var/max = mytape.max_capacity
-		for(used, used < max)
-			if(recording == 0)
-				break
+		while(recording && used < max)
 			mytape.used_capacity++
 			used++
 			sleep(10)
@@ -225,9 +220,8 @@
 	P.info = t1
 	P.name = "paper- 'Transcript'"
 	usr.put_in_hands(P)
-	canprint = 0
-	sleep(300)
-	canprint = 1
+	canprint = FALSE
+	addtimer(VARSET_CALLBACK(src, canprint, TRUE), 30 SECONDS)
 
 
 //empty tape recorders
@@ -244,7 +238,7 @@
 	lefthand_file = 'icons/mob/inhands/equipment/tools_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/tools_righthand.dmi'
 	w_class = WEIGHT_CLASS_TINY
-	materials = list(MAT_METAL=20, MAT_GLASS=5)
+	custom_materials = list(/datum/material/iron=20, /datum/material/glass=5)
 	force = 1
 	throwforce = 0
 	var/max_capacity = 600
@@ -277,7 +271,7 @@
 
 
 /obj/item/tape/attackby(obj/item/I, mob/user, params)
-	if(ruined && istype(I, /obj/item/screwdriver) || istype(I, /obj/item/pen))
+	if(ruined && I.tool_behaviour == TOOL_SCREWDRIVER || istype(I, /obj/item/pen))
 		to_chat(user, "<span class='notice'>You start winding the tape back in...</span>")
 		if(I.use_tool(src, user, 120))
 			to_chat(user, "<span class='notice'>You wound the tape back in.</span>")
@@ -287,6 +281,6 @@
 /obj/item/tape/random
 	icon_state = "random_tape"
 
-/obj/item/tape/random/New()
+/obj/item/tape/random/Initialize()
+	. = ..()
 	icon_state = "tape_[pick("white", "blue", "red", "yellow", "purple")]"
-	..()

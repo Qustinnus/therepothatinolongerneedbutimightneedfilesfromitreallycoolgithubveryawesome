@@ -17,26 +17,35 @@
 	ventcrawler = VENTCRAWLER_ALWAYS
 	pass_flags = PASSTABLE
 	mob_size = MOB_SIZE_SMALL
-	mob_biotypes = list(MOB_ORGANIC, MOB_BEAST)
+	mob_biotypes = MOB_ORGANIC|MOB_BEAST
 	minbodytemp = 200
 	maxbodytemp = 400
 	unsuitable_atmos_damage = 1
 	animal_species = /mob/living/simple_animal/pet/cat
 	childtype = list(/mob/living/simple_animal/pet/cat/kitten)
 	butcher_results = list(/obj/item/reagent_containers/food/snacks/meat/slab = 2, /obj/item/organ/ears/cat = 1, /obj/item/organ/tail/cat = 1)
-	response_help  = "pets"
-	response_disarm = "gently pushes aside"
-	response_harm   = "kicks"
+	response_help_continuous = "pets"
+	response_help_simple = "pet"
+	response_disarm_continuous = "gently pushes aside"
+	response_disarm_simple = "gently push aside"
+	response_harm_continuous = "kicks"
+	response_harm_simple = "kick"
 	var/turns_since_scan = 0
 	var/mob/living/simple_animal/mouse/movement_target
+	///Limits how often cats can spam chasing mice.
+	var/emote_cooldown = 0
 	gold_core_spawnable = FRIENDLY_SPAWN
 	collar_type = "cat"
+	can_be_held = TRUE
+	held_state = "cat2"
+
+	footstep_type = FOOTSTEP_MOB_CLAW
 
 /mob/living/simple_animal/pet/cat/Initialize()
 	. = ..()
 	verbs += /mob/living/proc/lay_down
 
-/mob/living/simple_animal/pet/cat/update_canmove()
+/mob/living/simple_animal/pet/cat/update_mobility()
 	..()
 	if(client && stat != DEAD)
 		if (resting)
@@ -47,7 +56,6 @@
 			collar_type = "[initial(collar_type)]"
 	regenerate_icons()
 
-
 /mob/living/simple_animal/pet/cat/space
 	name = "space cat"
 	desc = "It's a cat... in space!"
@@ -57,6 +65,7 @@
 	unsuitable_atmos_damage = 0
 	minbodytemp = TCMB
 	maxbodytemp = T0C + 40
+	held_state = "spacecat"
 
 /mob/living/simple_animal/pet/cat/original
 	name = "Batsy"
@@ -67,6 +76,7 @@
 	icon_dead = "original_dead"
 	collar_type = null
 	unique_pet = TRUE
+	held_state = "original"
 
 /mob/living/simple_animal/pet/cat/kitten
 	name = "kitten"
@@ -93,6 +103,7 @@
 	var/list/children = list()//Actual mob instances of children
 	var/cats_deployed = 0
 	var/memory_saved = FALSE
+	held_state = "cat"
 
 /mob/living/simple_animal/pet/cat/Runtime/Initialize()
 	if(prob(5))
@@ -141,7 +152,7 @@
 	family = list()
 	if(!dead)
 		for(var/mob/living/simple_animal/pet/cat/kitten/C in children)
-			if(istype(C,type) || C.stat || !C.z || !C.butcher_results) //That last one is a work around for hologram cats
+			if(istype(C,type) || C.stat || !C.z || (C.flags_1 & HOLOGRAM_1))
 				continue
 			if(C.type in family)
 				family[C.type] += 1
@@ -170,21 +181,18 @@
 			emote("me", 1, pick("stretches out for a belly rub.", "wags its tail.", "lies down."))
 			icon_state = "[icon_living]_rest"
 			collar_type = "[initial(collar_type)]_rest"
-			resting = 1
-			update_canmove()
+			set_resting(TRUE)
 		else if (prob(1))
 			emote("me", 1, pick("sits down.", "crouches on its hind legs.", "looks alert."))
 			icon_state = "[icon_living]_sit"
 			collar_type = "[initial(collar_type)]_sit"
-			resting = 1
-			update_canmove()
+			set_resting(TRUE)
 		else if (prob(1))
 			if (resting)
 				emote("me", 1, pick("gets up and meows.", "walks around.", "stops resting."))
 				icon_state = "[icon_living]"
 				collar_type = "[initial(collar_type)]"
-				resting = 0
-				update_canmove()
+				set_resting(FALSE)
 			else
 				emote("me", 1, pick("grooms its fur.", "twitches its whiskers.", "shakes out its coat."))
 
@@ -192,6 +200,12 @@
 	if((src.loc) && isturf(src.loc))
 		if(!stat && !resting && !buckled)
 			for(var/mob/living/simple_animal/mouse/M in view(1,src))
+				if(istype(M, /mob/living/simple_animal/mouse/brown/Tom) && (name == "Jerry")) //Turns out there's no jerry subtype.
+					if (emote_cooldown < (world.time - 600))
+						visible_message("<span class='warning'>[src] chases [M] around, to no avail!</span>")
+						step(M, pick(GLOB.cardinals))
+						emote_cooldown = world.time
+					break
 				if(!M.stat && Adjacent(M))
 					emote("me", 1, "splats \the [M]!")
 					M.splat()
@@ -240,6 +254,9 @@
 			if(M && stat != DEAD)
 				new /obj/effect/temp_visual/heart(loc)
 				emote("me", 1, "purrs!")
+				if(flags_1 & HOLOGRAM_1)
+					return
+				SEND_SIGNAL(M, COMSIG_ADD_MOOD_EVENT, src, /datum/mood_event/pet_animal, src)
 		else
 			if(M && stat != DEAD)
 				emote("me", 1, "hisses!")
@@ -256,10 +273,12 @@
 	harm_intent_damage = 10
 	butcher_results = list(/obj/item/organ/brain = 1, /obj/item/organ/heart = 1, /obj/item/reagent_containers/food/snacks/cakeslice/birthday = 3,  \
 	/obj/item/reagent_containers/food/snacks/meat/slab = 2)
-	response_harm = "takes a bite out of"
+	response_harm_continuous = "takes a bite out of"
+	response_harm_simple = "take a bite out of"
 	attacked_sound = 'sound/items/eatfood.ogg'
 	deathmessage = "loses its false life and collapses!"
-	death_sound = "bodyfall"
+	deathsound = "bodyfall"
+	held_state = "cak"
 
 /mob/living/simple_animal/pet/cat/cak/CheckParts(list/parts)
 	..()
@@ -282,15 +301,11 @@
 	if(health < maxHealth)
 		adjustBruteLoss(-8) //Fast life regen
 	for(var/obj/item/reagent_containers/food/snacks/donut/D in range(1, src)) //Frosts nearby donuts!
-		if(D.icon_state != "donut2")
-			D.name = "frosted donut"
-			D.icon_state = "donut2"
-			D.reagents.add_reagent("sprinkles", 2)
-			D.bonus_reagents = list("sprinkles" = 2, "sugar" = 1)
-			D.filling_color = "#FF69B4"
+		if(!D.is_decorated)
+			D.decorate_donut()
 
 /mob/living/simple_animal/pet/cat/cak/attack_hand(mob/living/L)
 	..()
 	if(L.a_intent == INTENT_HARM && L.reagents && !stat)
-		L.reagents.add_reagent("nutriment", 0.4)
-		L.reagents.add_reagent("vitamin", 0.4)
+		L.reagents.add_reagent(/datum/reagent/consumable/nutriment, 0.4)
+		L.reagents.add_reagent(/datum/reagent/consumable/nutriment/vitamin, 0.4)

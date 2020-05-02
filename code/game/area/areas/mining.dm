@@ -7,7 +7,6 @@
 /area/mine/explored
 	name = "Mine"
 	icon_state = "explored"
-	music = null
 	always_unpowered = TRUE
 	requires_power = TRUE
 	poweralm = FALSE
@@ -21,7 +20,6 @@
 /area/mine/unexplored
 	name = "Mine"
 	icon_state = "unexplored"
-	music = null
 	always_unpowered = TRUE
 	requires_power = TRUE
 	poweralm = FALSE
@@ -34,9 +32,11 @@
 
 /area/mine/lobby
 	name = "Mining Station"
+	icon_state = "mining_lobby"
 
 /area/mine/storage
 	name = "Mining Station Storage"
+	icon_state = "mining_storage"
 
 /area/mine/production
 	name = "Mining Station Starboard Wing"
@@ -58,15 +58,18 @@
 
 /area/mine/cafeteria
 	name = "Mining Station Cafeteria"
+	icon_state = "mining_labor_cafe"
 
 /area/mine/hydroponics
 	name = "Mining Station Hydroponics"
+	icon_state = "mining_labor_hydro"
 
 /area/mine/sleeper
 	name = "Mining Station Emergency Sleeper"
 
 /area/mine/laborcamp
 	name = "Labor Camp"
+	icon_state = "mining_labor"
 
 /area/mine/laborcamp/security
 	name = "Labor Camp Security"
@@ -82,11 +85,11 @@
 	icon_state = "mining"
 	has_gravity = STANDARD_GRAVITY
 	flags_1 = NONE
+	blob_allowed = FALSE
 
 /area/lavaland/surface
 	name = "Lavaland"
 	icon_state = "explored"
-	music = null
 	always_unpowered = TRUE
 	poweralm = FALSE
 	power_environ = FALSE
@@ -98,7 +101,6 @@
 /area/lavaland/underground
 	name = "Lavaland Caves"
 	icon_state = "unexplored"
-	music = null
 	always_unpowered = TRUE
 	requires_power = TRUE
 	poweralm = FALSE

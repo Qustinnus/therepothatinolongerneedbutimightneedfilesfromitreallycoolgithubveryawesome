@@ -16,12 +16,13 @@
 	..()
 	if(!quirk_mob || (human_only && !ishuman(quirk_mob)) || quirk_mob.has_quirk(type))
 		qdel(src)
+		return
 	quirk_holder = quirk_mob
 	SSquirks.quirk_objects += src
 	to_chat(quirk_holder, gain_text)
 	quirk_holder.roundstart_quirks += src
 	if(mob_trait)
-		quirk_holder.add_trait(mob_trait, ROUNDSTART_TRAIT)
+		ADD_TRAIT(quirk_holder, mob_trait, ROUNDSTART_TRAIT)
 	START_PROCESSING(SSquirks, src)
 	add()
 	if(spawn_effects)
@@ -35,7 +36,7 @@
 		to_chat(quirk_holder, lose_text)
 		quirk_holder.roundstart_quirks -= src
 		if(mob_trait)
-			quirk_holder.remove_trait(mob_trait, ROUNDSTART_TRAIT, TRUE)
+			REMOVE_TRAIT(quirk_holder, mob_trait, ROUNDSTART_TRAIT)
 	SSquirks.quirk_objects -= src
 	return ..()
 
@@ -43,8 +44,8 @@
 	quirk_holder.roundstart_quirks -= src
 	to_mob.roundstart_quirks += src
 	if(mob_trait)
-		quirk_holder.remove_trait(mob_trait, ROUNDSTART_TRAIT)
-		to_mob.add_trait(mob_trait, ROUNDSTART_TRAIT)
+		REMOVE_TRAIT(quirk_holder, mob_trait, ROUNDSTART_TRAIT)
+		ADD_TRAIT(to_mob, mob_trait, ROUNDSTART_TRAIT)
 	quirk_holder = to_mob
 	on_transfer()
 
@@ -55,9 +56,6 @@
 /datum/quirk/proc/post_add() //for text, disclaimers etc. given after you spawn in with the trait
 /datum/quirk/proc/on_transfer() //code called when the trait is transferred to a new mob
 
-/datum/quirk/proc/clone_data() //return additional data that should be remembered by cloning
-/datum/quirk/proc/on_clone(data) //create the quirk from clone data
-
 /datum/quirk/process()
 	if(QDELETED(quirk_holder))
 		quirk_holder = null
@@ -67,22 +65,36 @@
 		return
 	on_process()
 
-/mob/living/proc/get_trait_string(medical) //helper string. gets a string of all the traits the mob has
+/mob/living/proc/get_trait_string(medical, category) //helper string. gets a string of all the traits the mob has
 	var/list/dat = list()
-	if(!medical)
-		for(var/V in roundstart_quirks)
-			var/datum/quirk/T = V
-			dat += T.name
-		if(!dat.len)
-			return "None"
-		return dat.Join(", ")
-	else
-		for(var/V in roundstart_quirks)
-			var/datum/quirk/T = V
-			dat += T.medical_record_text
-		if(!dat.len)
-			return "None"
-		return dat.Join("<br>")
+	switch(category)
+		if(CAT_QUIRK_ALL)
+			for(var/V in roundstart_quirks)
+				var/datum/quirk/T = V
+				dat += medical ? T.medical_record_text : T.name
+				if(!dat.len)
+					return "None"
+		//Major Disabilities
+		if(CAT_QUIRK_MAJOR_DISABILITY)
+			for(var/V in roundstart_quirks)
+				var/datum/quirk/T = V
+				if(T.value < -1)
+					dat += medical ? T.medical_record_text : T.name
+		//Minor Disabilities
+		if(CAT_QUIRK_MINOR_DISABILITY)
+			for(var/V in roundstart_quirks)
+				var/datum/quirk/T = V
+				if(T.value == -1)
+					dat += medical ? T.medical_record_text : T.name
+		//Neutral and Positive quirks
+		if(CAT_QUIRK_NOTES)
+			for(var/V in roundstart_quirks)
+				var/datum/quirk/T = V
+				if(T.value > -1)
+					dat += medical ? T.medical_record_text : T.name
+	if(!dat.len)
+		return medical ? "No issues have been declared." : "None"
+	return medical ?  dat.Join("<br>") : dat.Join(", ")
 
 /mob/living/proc/cleanse_trait_datums() //removes all trait datums
 	for(var/V in roundstart_quirks)
@@ -111,7 +123,7 @@ Use this as a guideline
 
 	mob_trait = TRAIT_NEARSIGHT
 	///This define is in __DEFINES/traits.dm and is the actual "trait" that the game tracks
-	///You'll need to use "has_trait(X, sources)" checks around the code to check this; for instance, the Ageusia trait is checked in taste code
+	///You'll need to use "HAS_TRAIT_FROM(src, X, sources)" checks around the code to check this; for instance, the Ageusia trait is checked in taste code
 	///If you need help finding where to put it, the declaration finder on GitHub is the best way to locate it
 
 	gain_text = "<span class='danger'>Things far away from you start looking blurry.</span>"
@@ -123,7 +135,7 @@ Use this as a guideline
 	var/mob/living/carbon/human/H = quirk_holder
 	var/obj/item/clothing/glasses/regular/glasses = new(get_turf(H))
 	H.put_in_hands(glasses)
-	H.equip_to_slot(glasses, SLOT_GLASSES)
+	H.equip_to_slot(glasses, ITEM_SLOT_EYES)
 	H.regenerate_icons()
 
 //This whole proc is called automatically

@@ -15,29 +15,6 @@
 /obj/item/radio/intercom/unscrewed
 	unfastened = TRUE
 
-/obj/item/radio/intercom/ratvar
-	name = "hierophant intercom"
-	desc = "A modified intercom that uses the Hierophant network instead of subspace tech. Can listen to and broadcast on any frequency."
-	icon_state = "intercom_ratvar"
-	freerange = TRUE
-
-/obj/item/radio/intercom/ratvar/attackby(obj/item/I, mob/living/user, params)
-	if(istype(I, /obj/item/screwdriver))
-		to_chat(user, "<span class='danger'>[src] is fastened to the wall with [is_servant_of_ratvar(user) ? "replicant alloy" : "some material you've never seen"], and can't be removed.</span>")
-		return //no unfastening!
-	. = ..()
-
-/obj/item/radio/intercom/ratvar/process()
-	if(!istype(SSticker.mode, /datum/game_mode/clockwork_cult))
-		invisibility = INVISIBILITY_OBSERVER
-		alpha = 125
-		emped = TRUE
-	else
-		invisibility = initial(invisibility)
-		alpha = initial(alpha)
-		emped = FALSE
-	..()
-
 /obj/item/radio/intercom/Initialize(mapload, ndir, building)
 	. = ..()
 	if(building)
@@ -49,14 +26,15 @@
 	return ..()
 
 /obj/item/radio/intercom/examine(mob/user)
-	..()
+	. = ..()
+	. += "<span class='notice'>Use [MODE_TOKEN_INTERCOM] when nearby to speak into it.</span>"
 	if(!unfastened)
-		to_chat(user, "<span class='notice'>It's <b>screwed</b> and secured to the wall.</span>")
+		. += "<span class='notice'>It's <b>screwed</b> and secured to the wall.</span>"
 	else
-		to_chat(user, "<span class='notice'>It's <i>unscrewed</i> from the wall, and can be <b>detached</b>.</span>")
+		. += "<span class='notice'>It's <i>unscrewed</i> from the wall, and can be <b>detached</b>.</span>"
 
 /obj/item/radio/intercom/attackby(obj/item/I, mob/living/user, params)
-	if(istype(I, /obj/item/screwdriver))
+	if(I.tool_behaviour == TOOL_SCREWDRIVER)
 		if(unfastened)
 			user.visible_message("<span class='notice'>[user] starts tightening [src]'s screws...</span>", "<span class='notice'>You start screwing in [src]...</span>")
 			if(I.use_tool(src, user, 30, volume=50))
@@ -68,7 +46,7 @@
 				user.visible_message("<span class='notice'>[user] loosens [src]'s screws!</span>", "<span class='notice'>You unscrew [src], loosening it from the wall.</span>")
 				unfastened = TRUE
 		return
-	else if(istype(I, /obj/item/wrench))
+	else if(I.tool_behaviour == TOOL_WRENCH)
 		if(!unfastened)
 			to_chat(user, "<span class='warning'>You need to unscrew [src] from the wall first!</span>")
 			return
@@ -76,7 +54,7 @@
 		I.play_tool_sound(src)
 		if(I.use_tool(src, user, 80))
 			user.visible_message("<span class='notice'>[user] unsecures [src]!</span>", "<span class='notice'>You detach [src] from the wall.</span>")
-			playsound(src, 'sound/items/deconstruct.ogg', 50, 1)
+			playsound(src, 'sound/items/deconstruct.ogg', 50, TRUE)
 			new/obj/item/wallframe/intercom(get_turf(src))
 			qdel(src)
 		return
@@ -138,6 +116,12 @@
 /obj/item/radio/intercom/add_blood_DNA(list/blood_dna)
 	return FALSE
 
+/obj/item/radio/intercom/end_emp_effect(curremp)
+	. = ..()
+	if(!.)
+		return
+	on = FALSE
+
 //Created through the autolathe or through deconstructing intercoms. Can be applied to wall to make a new intercom on it!
 /obj/item/wallframe/intercom
 	name = "intercom frame"
@@ -146,4 +130,4 @@
 	result_path = /obj/item/radio/intercom/unscrewed
 	pixel_shift = 29
 	inverse = TRUE
-	materials = list(MAT_METAL = 75, MAT_GLASS = 25)
+	custom_materials = list(/datum/material/iron = 75, /datum/material/glass = 25)

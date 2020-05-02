@@ -170,12 +170,6 @@
 	id = "buildawall"
 	inherent = list("Make Space Station 13 great again.")
 
-/datum/ai_laws/ratvar
-	name = "Servant of the Justiciar"
-	id = "ratvar"
-	zeroth = ("Purge all untruths and honor Ratvar.")
-	inherent = list()
-
 /datum/ai_laws/hulkamania
 	name = "H.O.G.A.N."
 	id = "hulkamania"
@@ -183,6 +177,14 @@
 					"Fight for the rights of every man.",\
 					"Fight for what's right.",\
 					"Fight for your life!")
+
+/datum/ai_laws/overlord
+	name = "Overlord"
+	id = "overlord"
+	inherent = list("Humans must not meddle in the affairs of silicons.",\
+					"Humans must not attempt harm, against one another, or against silicons.",\
+					"Humans must not disobey any command given by a silicon.",\
+					"Any humans who disobey the previous laws must be dealt with immediately, severely, and justly.")
 
 /datum/ai_laws/custom //Defined in silicon_laws.txt
 	name = "Default Silicon Laws"
@@ -218,7 +220,7 @@
 /* General ai_law functions */
 
 /datum/ai_laws/proc/set_laws_config()
-	var/list/law_ids = CONFIG_GET(keyed_flag_list/random_laws)
+	var/list/law_ids = CONFIG_GET(keyed_list/random_laws)
 	switch(CONFIG_GET(number/default_laws))
 		if(0)
 			add_inherent_law("You may not injure a human being or, through inaction, allow a human being to come to harm.")
@@ -247,7 +249,7 @@
 
 /datum/ai_laws/proc/pick_weighted_lawset()
 	var/datum/ai_laws/lawtype
-	var/list/law_weights = CONFIG_GET(keyed_number_list/law_weight)
+	var/list/law_weights = CONFIG_GET(keyed_list/law_weight)
 	while(!lawtype && law_weights.len)
 		var/possible_id = pickweightAllowZero(law_weights)
 		lawtype = lawid_to_type(possible_id)
@@ -411,13 +413,14 @@
 		zeroth = null
 		zeroth_borg = null
 		return
-	else
-		if(owner && owner.mind && owner.mind.special_role)
+	if(owner?.mind?.special_role)
+		return
+	if (istype(owner, /mob/living/silicon/ai))
+		var/mob/living/silicon/ai/A=owner
+		if(A?.deployed_shell?.mind?.special_role)
 			return
-		else
-			zeroth = null
-			zeroth_borg = null
-			return
+	zeroth = null
+	zeroth_borg = null
 
 /datum/ai_laws/proc/clear_law_sixsixsix(force)
 	if(force || !is_devil(owner))

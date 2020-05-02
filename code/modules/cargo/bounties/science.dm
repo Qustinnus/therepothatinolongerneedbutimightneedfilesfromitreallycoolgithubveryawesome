@@ -45,7 +45,7 @@
 	name = "Diamond Mining Drill"
 	description = "Central Command is willing to pay three months salary in exchange for one diamond mining drill."
 	reward = 15000
-	wanted_types = list(/obj/item/mecha_parts/mecha_equipment/drill/diamonddrill)
+	wanted_types = list(/obj/item/pickaxe/drill/diamonddrill, /obj/item/mecha_parts/mecha_equipment/drill/diamonddrill)
 
 /datum/bounty/item/science/floor_buffer
 	name = "Floor Buffer Upgrade"
@@ -55,7 +55,7 @@
 
 /datum/bounty/item/science/advanced_mop
 	name = "Advanced Mop"
-	description = "Excuse me. I'd like to request $17 for a push broom rebristling. Either that, or an advanced mop."
+	description = "Excuse me. I'd like to request 17 cr for a push broom rebristling. Either that, or an advanced mop."
 	reward = 10000
 	wanted_types = list(/obj/item/mop/advanced)
 

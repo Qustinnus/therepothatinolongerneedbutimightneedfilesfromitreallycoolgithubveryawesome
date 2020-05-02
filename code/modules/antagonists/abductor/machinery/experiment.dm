@@ -15,7 +15,8 @@
 	var/breakout_time = 450
 
 /obj/machinery/abductor/experiment/MouseDrop_T(mob/target, mob/user)
-	if(user.stat || user.lying || !Adjacent(user) || !target.Adjacent(user) || !ishuman(target))
+	var/mob/living/L = user
+	if(user.stat || (isliving(user) && (!(L.mobility_flags & MOBILITY_STAND) || !(L.mobility_flags & MOBILITY_UI))) || !Adjacent(user) || !target.Adjacent(user) || !ishuman(target))
 		return
 	if(isabductor(target))
 		return
@@ -51,7 +52,7 @@
 	user.last_special = world.time + CLICK_CD_BREAKOUT
 	user.visible_message("<span class='notice'>You see [user] kicking against the door of [src]!</span>", \
 		"<span class='notice'>You lean on the back of [src] and start pushing the door open... (this will take about [DisplayTimeText(breakout_time)].)</span>", \
-		"<span class='italics'>You hear a metallic creaking from [src].</span>")
+		"<span class='hear'>You hear a metallic creaking from [src].</span>")
 	if(do_after(user,(breakout_time), target = src))
 		if(!user || user.stat != CONSCIOUS || user.loc != src || state_open)
 			return
@@ -74,13 +75,13 @@
 		eyes.Blend("#[H.eye_color]", ICON_MULTIPLY)
 
 	var/datum/sprite_accessory/S
-	S = GLOB.hair_styles_list[H.hair_style]
+	S = GLOB.hairstyles_list[H.hairstyle]
 	if(S && (HAIR in H.dna.species.species_traits))
 		var/icon/hair = icon("icon" = S.icon, "icon_state" = "[S.icon_state]")
 		hair.Blend("#[H.hair_color]", ICON_MULTIPLY)
 		eyes.Blend(hair, ICON_OVERLAY)
 
-	S = GLOB.facial_hair_styles_list[H.facial_hair_style]
+	S = GLOB.facial_hairstyles_list[H.facial_hairstyle]
 	if(S && (FACEHAIR in H.dna.species.species_traits))
 		var/icon/facial = icon("icon" = S.icon, "icon_state" = "[S.icon_state]")
 		facial.Blend("#[H.facial_hair_color]", ICON_MULTIPLY)
@@ -99,8 +100,9 @@
 	dat += "<h3> Experiment </h3>"
 	if(occupant)
 		var/obj/item/photo/P = new
-		P.photocreate(null, icon(dissection_icon(occupant), dir = SOUTH))
-		user << browse_rsc(P.img, "dissection_img")
+		P.picture = new
+		P.picture.picture_image = icon(dissection_icon(occupant), dir = SOUTH)
+		user << browse_rsc(P.picture.picture_image, "dissection_img")
 		dat += "<table><tr><td>"
 		dat += "<img src=dissection_img height=80 width=80>" //Avert your eyes
 		dat += "</td><td>"
@@ -196,19 +198,18 @@
 		if(point_reward > 0)
 			open_machine()
 			SendBack(H)
-			playsound(src.loc, 'sound/machines/ding.ogg', 50, 1)
+			playsound(src.loc, 'sound/machines/ding.ogg', 50, TRUE)
 			points += point_reward
 			credits += point_reward
 			return "<span class='good'>Experiment successful! [point_reward] new data-points collected.</span>"
 		else
-			playsound(src.loc, 'sound/machines/buzz-sigh.ogg', 50, 1)
+			playsound(src.loc, 'sound/machines/buzz-sigh.ogg', 50, TRUE)
 			return "<span class='bad'>Experiment failed! No replacement organ detected.</span>"
 	else
 		say("Brain activity nonexistent - disposing sample...")
 		open_machine()
 		SendBack(H)
 		return "<span class='bad'>Specimen braindead - disposed.</span>"
-	return "<span class='bad'>ERROR</span>"
 
 
 /obj/machinery/abductor/experiment/proc/SendBack(mob/living/carbon/human/H)
@@ -222,7 +223,7 @@
 	return
 
 
-/obj/machinery/abductor/experiment/update_icon()
+/obj/machinery/abductor/experiment/update_icon_state()
 	if(state_open)
 		icon_state = "experiment-open"
 	else

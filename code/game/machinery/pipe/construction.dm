@@ -18,7 +18,6 @@ Buildable meters
 	icon_state = "simple"
 	item_state = "buildpipe"
 	w_class = WEIGHT_CLASS_NORMAL
-	level = 2
 	var/piping_layer = PIPING_LAYER_DEFAULT
 	var/RPD_type
 
@@ -75,8 +74,7 @@ Buildable meters
 		new_layer = PIPING_LAYER_DEFAULT
 	piping_layer = new_layer
 
-	pixel_x += (piping_layer - PIPING_LAYER_DEFAULT) * PIPING_LAYER_P_X
-	pixel_y += (piping_layer - PIPING_LAYER_DEFAULT) * PIPING_LAYER_P_Y
+	PIPING_LAYER_SHIFT(src, piping_layer)
 	layer = initial(layer) + ((piping_layer - PIPING_LAYER_DEFAULT) * PIPING_LAYER_LCHANGE)
 
 /obj/item/pipe/proc/update()
@@ -91,7 +89,7 @@ Buildable meters
 	set name = "Flip Pipe"
 	set src in view(1)
 
-	if ( usr.stat || usr.restrained() || !usr.canmove )
+	if ( usr.incapacitated() )
 		return
 
 	do_a_flip()
@@ -128,6 +126,7 @@ Buildable meters
 	setDir(turn(dir,-90))
 
 /obj/item/pipe/wrench_act(mob/living/user, obj/item/wrench/W)
+	. = ..()
 	if(!isturf(loc))
 		return TRUE
 
@@ -155,7 +154,7 @@ Buildable meters
 	user.visible_message( \
 		"[user] fastens \the [src].", \
 		"<span class='notice'>You fasten \the [src].</span>", \
-		"<span class='italics'>You hear ratcheting.</span>")
+		"<span class='hear'>You hear ratcheting.</span>")
 
 	qdel(src)
 
@@ -197,7 +196,7 @@ Buildable meters
 	var/piping_layer = PIPING_LAYER_DEFAULT
 
 /obj/item/pipe_meter/wrench_act(mob/living/user, obj/item/wrench/W)
-
+	. = ..()
 	var/obj/machinery/atmospherics/pipe/pipe
 	for(var/obj/machinery/atmospherics/pipe/P in loc)
 		if(P.piping_layer == piping_layer)
@@ -212,6 +211,10 @@ Buildable meters
 	qdel(src)
 
 /obj/item/pipe_meter/screwdriver_act(mob/living/user, obj/item/S)
+	. = ..()
+	if(.)
+		return TRUE
+
 	if(!isturf(loc))
 		to_chat(user, "<span class='warning'>You need to fasten it to the floor!</span>")
 		return TRUE
@@ -228,5 +231,4 @@ Buildable meters
 
 /obj/item/pipe_meter/proc/setAttachLayer(new_layer = PIPING_LAYER_DEFAULT)
 	piping_layer = new_layer
-	pixel_x = (new_layer - PIPING_LAYER_DEFAULT) * PIPING_LAYER_P_X
-	pixel_y = (new_layer - PIPING_LAYER_DEFAULT) * PIPING_LAYER_P_Y
+	PIPING_LAYER_DOUBLE_SHIFT(src, piping_layer)

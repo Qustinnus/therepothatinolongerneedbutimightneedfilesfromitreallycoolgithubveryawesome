@@ -8,6 +8,8 @@ GLOBAL_PROTECT(exp_to_update)
 		return 0
 	if(!CONFIG_GET(flag/use_exp_tracking))
 		return 0
+	if(!SSdbcore.Connect())
+		return 0
 	if(!exp_requirements || !exp_type)
 		return 0
 	if(!job_is_xp_locked(src.title))
@@ -38,7 +40,7 @@ GLOBAL_PROTECT(exp_to_update)
 	return exp_type
 
 /proc/job_is_xp_locked(jobtitle)
-	if(!CONFIG_GET(flag/use_exp_restrictions_heads) && jobtitle in (GLOB.command_positions | list("AI")))
+	if(!CONFIG_GET(flag/use_exp_restrictions_heads) && (jobtitle in (GLOB.command_positions | list("AI"))))
 		return FALSE
 	if(!CONFIG_GET(flag/use_exp_restrictions_other) && !(jobtitle in (GLOB.command_positions | list("AI"))))
 		return FALSE
@@ -120,11 +122,11 @@ GLOBAL_PROTECT(exp_to_update)
 	return return_text
 
 
-/client/proc/get_exp_living()
-	if(!prefs.exp)
-		return "No data"
+/client/proc/get_exp_living(pure_numeric = FALSE)
+	if(!prefs.exp || !prefs.exp[EXP_TYPE_LIVING])
+		return pure_numeric ? 0 : "No data"
 	var/exp_living = text2num(prefs.exp[EXP_TYPE_LIVING])
-	return get_exp_format(exp_living)
+	return pure_numeric ? exp_living : get_exp_format(exp_living)
 
 /proc/get_exp_format(expnum)
 	if(expnum > 60)
@@ -155,7 +157,7 @@ GLOBAL_PROTECT(exp_to_update)
 	if(!SSdbcore.Connect())
 		return -1
 	var/datum/DBQuery/exp_read = SSdbcore.NewQuery("SELECT job, minutes FROM [format_table_name("role_time")] WHERE ckey = '[sanitizeSQL(ckey)]'")
-	if(!exp_read.Execute())
+	if(!exp_read.Execute(async = TRUE))
 		qdel(exp_read)
 		return -1
 	var/list/play_records = list()
@@ -171,7 +173,6 @@ GLOBAL_PROTECT(exp_to_update)
 			play_records[rtype] = 0
 
 	prefs.exp = play_records
-
 
 //updates player db flags
 /client/proc/update_flag_db(newflag, state = FALSE)
@@ -269,7 +270,7 @@ GLOBAL_PROTECT(exp_to_update)
 
 	var/datum/DBQuery/flags_read = SSdbcore.NewQuery("SELECT flags FROM [format_table_name("player")] WHERE ckey='[ckey]'")
 
-	if(!flags_read.Execute())
+	if(!flags_read.Execute(async = TRUE))
 		qdel(flags_read)
 		return FALSE
 

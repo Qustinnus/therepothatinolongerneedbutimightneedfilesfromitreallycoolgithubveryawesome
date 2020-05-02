@@ -98,6 +98,7 @@
 	noteleport = TRUE
 	hidden = TRUE
 	safe = TRUE
+	flags_1 = NONE
 
 GLOBAL_DATUM(ai_camera_room_landmark, /obj/effect/landmark/ai_multicam_room)
 
@@ -120,6 +121,9 @@ GLOBAL_DATUM(ai_camera_room_landmark, /obj/effect/landmark/ai_multicam_room)
 
 /mob/camera/aiEye/pic_in_pic
 	name = "Secondary AI Eye"
+	invisibility = INVISIBILITY_OBSERVER
+	mouse_opacity = MOUSE_OPACITY_ICON
+	icon_state = "ai_pip_camera"
 	var/obj/screen/movable/pic_in_pic/ai/screen
 	var/list/cameras_telegraphed = list()
 	var/telegraph_cameras = TRUE
@@ -194,7 +198,7 @@ GLOBAL_DATUM(ai_camera_room_landmark, /obj/effect/landmark/ai_multicam_room)
 //AI procs
 
 /mob/living/silicon/ai/proc/drop_new_multicam(silent = FALSE)
-	if(!multicam_allowed)
+	if(!CONFIG_GET(flag/allow_ai_multicam))
 		if(!silent)
 			to_chat(src, "<span class='warning'>This action is currently disabled. Contact an administrator to enable this feature.</span>")
 		return
@@ -213,7 +217,7 @@ GLOBAL_DATUM(ai_camera_room_landmark, /obj/effect/landmark/ai_multicam_room)
 	return C
 
 /mob/living/silicon/ai/proc/toggle_multicam()
-	if(!multicam_allowed)
+	if(!CONFIG_GET(flag/allow_ai_multicam))
 		to_chat(src, "<span class='warning'>This action is currently disabled. Contact an administrator to enable this feature.</span>")
 		return
 	if(multicam_on)

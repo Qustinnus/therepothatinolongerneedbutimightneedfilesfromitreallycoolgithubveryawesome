@@ -6,6 +6,8 @@
 /mob/camera/aiEye
 	name = "Inactive AI Eye"
 
+	icon_state = "ai_camera"
+	icon = 'icons/mob/cameramob.dmi'
 	invisibility = INVISIBILITY_MAXIMUM
 	hud_possible = list(ANTAG_HUD, AI_DETECT_HUD = HUD_LIST_LIST)
 	var/list/visibleCameraChunks = list()
@@ -92,6 +94,25 @@
 		if(ai.master_multicam)
 			ai.master_multicam.refresh_view()
 
+//it uses setLoc not forceMove, talks to the sillycone and not the camera mob
+/mob/camera/aiEye/zMove(dir, feedback = FALSE)
+	if(dir != UP && dir != DOWN)
+		return FALSE
+	var/turf/target = get_step_multiz(src, dir)
+	if(!target)
+		if(feedback)
+			to_chat(ai, "<span class='warning'>There's nowhere to go in that direction!</span>")
+		return FALSE
+	if(!canZMove(dir, target))
+		if(feedback)
+			to_chat(ai, "<span class='warning'>You couldn't move there!</span>")
+		return FALSE
+	setLoc(target, TRUE)
+	return TRUE
+
+/mob/camera/aiEye/canZMove(direction, turf/target) //cameras do not respect these FLOORS you speak so much of
+	return TRUE
+
 /mob/camera/aiEye/Move()
 	return 0
 
@@ -158,11 +179,11 @@
 	cameraFollow = null
 	unset_machine()
 
-	if(!eyeobj || !eyeobj.loc || QDELETED(eyeobj))
+	if(isturf(loc) && (QDELETED(eyeobj) || !eyeobj.loc))
 		to_chat(src, "ERROR: Eyeobj not found. Creating new eye...")
 		create_eye()
 
-	eyeobj.setLoc(loc)
+	eyeobj?.setLoc(loc)
 
 /mob/living/silicon/ai/proc/create_eye()
 	if(eyeobj)
@@ -172,6 +193,14 @@
 	eyeobj.ai = src
 	eyeobj.setLoc(loc)
 	eyeobj.name = "[name] (AI Eye)"
+	eyeobj.real_name = eyeobj.name
+	set_eyeobj_visible(TRUE)
+
+/mob/living/silicon/ai/proc/set_eyeobj_visible(state = TRUE)
+	if(!eyeobj)
+		return
+	eyeobj.mouse_opacity = state ? MOUSE_OPACITY_ICON : initial(eyeobj.mouse_opacity)
+	eyeobj.invisibility = state ? INVISIBILITY_OBSERVER : initial(eyeobj.invisibility)
 
 /mob/living/silicon/ai/verb/toggle_acceleration()
 	set category = "AI Commands"
@@ -183,6 +212,7 @@
 	to_chat(usr, "Camera acceleration has been toggled [acceleration ? "on" : "off"].")
 
 /mob/camera/aiEye/Hear(message, atom/movable/speaker, datum/language/message_language, raw_message, radio_freq, list/spans, message_mode)
+	. = ..()
 	if(relay_speech && speaker && ai && !radio_freq && speaker != ai && near_camera(speaker))
 		ai.relay_speech(message, speaker, message_language, raw_message, radio_freq, spans, message_mode)
 
