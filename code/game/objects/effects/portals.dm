@@ -15,7 +15,7 @@
 	name = "portal"
 	desc = "Looks unstable. Best to test it with the clown."
 	icon = 'icons/obj/stationobjs.dmi'
-	icon_state = "portal"
+	icon_state = "portal_hole"
 	anchored = TRUE
 	var/mech_sized = FALSE
 	var/obj/effect/portal/linked
@@ -29,6 +29,8 @@
 	var/innate_accuracy_penalty = 0
 	var/last_effect = 0
 	var/force_teleport = FALSE
+	var/see_through = TRUE
+	var/obj/effect/portal_hole/portal_hole
 
 /obj/effect/portal/anom
 	name = "wormhole"
@@ -37,8 +39,18 @@
 	layer = RIPPLE_LAYER
 	mech_sized = TRUE
 	teleport_channel = TELEPORT_CHANNEL_WORMHOLE
+	see_through = FALSE
 
 /obj/effect/portal/Move(newloc)
+	if(linked)
+		portal_hole.vis_contents.Cut()
+		linked.portal_hole.vis_contents.Cut()
+		portal_hole.vis_contents += get_turf(linked)
+		linked.portal_hole.vis_contents += get_turf(src)
+		portal_hole.setup_filters()
+	else
+		portal_hole.vis_contents.Cut()
+		portal_hole.filters = null
 	for(var/T in newloc)
 		if(istype(T, /obj/effect/portal))
 			return FALSE
@@ -85,6 +97,9 @@
 	hardlinked = automatic_link
 	if(isturf(hard_target_override))
 		hard_target = hard_target_override
+	if(see_through)
+		portal_hole = new
+		vis_contents += portal_hole
 
 /obj/effect/portal/singularity_pull()
 	return
@@ -93,6 +108,17 @@
 	return
 
 /obj/effect/portal/proc/link_portal(obj/effect/portal/newlink)
+	if(see_through)
+		if(newlink)
+			portal_hole.vis_contents.Cut()
+			newlink.portal_hole.vis_contents.Cut()
+			portal_hole.vis_contents += get_turf(newlink)
+			newlink.portal_hole.vis_contents += get_turf(src)
+			portal_hole.setup_filters()
+			newlink.portal_hole.setup_filters()
+		else
+			portal_hole.vis_contents.Cut()
+			portal_hole.filters = null
 	linked = newlink
 	if(atmos_link)
 		link_atmos()
@@ -182,6 +208,20 @@
 	else
 		real_target = get_turf(linked)
 	return real_target
+
+/obj/effect/portal_hole
+	appearance_flags = KEEP_TOGETHER|TILE_BOUND|PIXEL_SCALE
+	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
+	var/alpha_icon = 'icons/obj/objects.dmi'
+	var/alpha_state = "portal_mask"
+
+/obj/effect/portal_hole/proc/setup_filters()
+	filters = null
+	filters += filter(type="alpha", icon = icon(alpha_icon, alpha_state))
+	filters += filter(type="blur", size = 1)
+	filters += filter(type="ripple", size = 2, radius = 1, falloff = 1)
+	animate(filters[3], time = 2.5 SECONDS, loop = -1, easing = LINEAR_EASING, radius = 16)
+
 
 /obj/effect/portal/permanent
 	name = "permanent portal"
