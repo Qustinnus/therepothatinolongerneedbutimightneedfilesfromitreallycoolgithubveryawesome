@@ -15,7 +15,7 @@
 	name = "portal"
 	desc = "Looks unstable. Best to test it with the clown."
 	icon = 'icons/obj/stationobjs.dmi'
-	icon_state = "portal_hole"
+	icon_state = "portal"
 	anchored = TRUE
 	var/mech_sized = FALSE
 	var/obj/effect/portal/linked
@@ -42,7 +42,8 @@
 	see_through = FALSE
 
 /obj/effect/portal/Move(newloc)
-	if(linked)
+	if(linked && see_through)
+		icon = 'icons/obj/seethroughportal.dmi'
 		portal_hole.vis_contents.Cut()
 		linked.portal_hole.vis_contents.Cut()
 		portal_hole.vis_contents += get_turf(linked)
@@ -51,6 +52,7 @@
 	else
 		portal_hole.vis_contents.Cut()
 		portal_hole.filters = null
+		icon = initial(icon)
 	for(var/T in newloc)
 		if(istype(T, /obj/effect/portal))
 			return FALSE
@@ -110,6 +112,7 @@
 /obj/effect/portal/proc/link_portal(obj/effect/portal/newlink)
 	if(see_through)
 		if(newlink)
+			icon = 'icons/obj/seethroughportal.dmi'
 			portal_hole.vis_contents.Cut()
 			newlink.portal_hole.vis_contents.Cut()
 			portal_hole.vis_contents += get_turf(newlink)
@@ -119,6 +122,7 @@
 		else
 			portal_hole.vis_contents.Cut()
 			portal_hole.filters = null
+			icon = initial(icon)
 	linked = newlink
 	if(atmos_link)
 		link_atmos()
