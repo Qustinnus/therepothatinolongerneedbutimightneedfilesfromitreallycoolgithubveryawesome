@@ -16,6 +16,16 @@
 //Trust me, you need one. Period. If you don't think you do, you're doing something extremely wrong.
 /obj/screen/plane_master/proc/backdrop(mob/mymob)
 
+/obj/screen/plane_master/glass
+	name = "glass plane master"
+	plane = GLASS_BACKDROP_PLANE
+	appearance_flags = PLANE_MASTER
+	blend_mode = BLEND_OVERLAY
+
+/obj/screen/plane_master/glass/backdrop(mob/mymob)
+	filters = list()
+	filters += GAUSSIAN_BLUR(0.6)
+
 ///Things rendered on "openspace"; holes in multi-z
 /obj/screen/plane_master/openspace
 	name = "open space plane master"

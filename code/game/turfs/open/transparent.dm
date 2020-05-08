@@ -1,3 +1,16 @@
+GLOBAL_DATUM_INIT(glass_backdrop, /atom/movable/glass_backdrop, new)
+
+/atom/movable/glass_backdrop
+	name			= "glass_backdrop"
+	icon            = 'icons/turf/floors.dmi'
+	icon_state      = "transparent"
+	anchored		= TRUE
+	plane           = GLASS_BACKDROP_PLANE
+	mouse_opacity 	= MOUSE_OPACITY_TRANSPARENT
+	layer           = SPLASHSCREEN_LAYER
+	appearance_flags = KEEP_TOGETHER
+
+
 /turf/open/transparent
 	baseturfs = /turf/open/transparent/openspace
 	intact = FALSE //this means wires go on top
@@ -65,7 +78,8 @@
 
 /turf/open/transparent/glass/Initialize()
 	icon_state = "" //Prevent the normal icon from appearing behind the smooth overlays
-	return ..()
+	. = ..()
+	vis_contents += GLOB.glass_backdrop //Add this after ..() so we get it in the right order
 
 /turf/open/transparent/glass/reinforced
 	name = "Reinforced glass floor"
