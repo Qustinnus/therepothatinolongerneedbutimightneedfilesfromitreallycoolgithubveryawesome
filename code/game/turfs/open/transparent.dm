@@ -3,12 +3,11 @@ GLOBAL_DATUM_INIT(glass_backdrop, /atom/movable/glass_backdrop, new)
 /atom/movable/glass_backdrop
 	name			= "glass_backdrop"
 	icon            = 'icons/turf/floors.dmi'
-	icon_state      = "transparent"
+	icon_state 		= "glass"
 	anchored		= TRUE
 	plane           = GLASS_BACKDROP_PLANE
 	mouse_opacity 	= MOUSE_OPACITY_TRANSPARENT
 	layer           = SPLASHSCREEN_LAYER
-	appearance_flags = KEEP_TOGETHER
 
 
 /turf/open/transparent
@@ -69,6 +68,7 @@ GLOBAL_DATUM_INIT(glass_backdrop, /atom/movable/glass_backdrop, new)
 	desc = "Dont jump on it, or do, I'm not your mom."
 	icon = 'icons/turf/floors/glass.dmi'
 	icon_state = "floor_glass"
+	appearance_flags = KEEP_TOGETHER
 	smooth = SMOOTH_MORE
 	canSmoothWith = list(/turf/open/transparent/glass, /turf/open/transparent/glass/reinforced)
 	footstep = FOOTSTEP_PLATING

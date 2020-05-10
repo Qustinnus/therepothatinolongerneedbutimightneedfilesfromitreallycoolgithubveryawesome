@@ -14,7 +14,7 @@ Format:
 endmap
 
 map boxstation
-	#default
+	#
 	#voteweight 1.5
 	votable
 endmap
@@ -48,4 +48,5 @@ map runtimestation
 endmap
 
 map multiz_debug
+	default
 endmap
