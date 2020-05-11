@@ -1,0 +1,6 @@
+author: "Garen7"
+delete-after: True
+changes: 
+  - tweak: "Angelic juggernaut constructs can now use their punch spell on cultists."
+  - bugfix: "Angelic juggernaut constructs' punch spell will now do the intended effect of 30 damage and a 5 second knockdown."
+  - imageadd: "Added new effects for the angelic juggernaut construct's spells"

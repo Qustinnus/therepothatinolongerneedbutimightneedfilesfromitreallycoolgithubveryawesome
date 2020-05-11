@@ -1,0 +1,5 @@
+author: "Tlaltecuhtli"
+delete-after: True
+changes: 
+  - bugfix: "bottler can accept reagent chamber's output
+sprite: the output pixel is blue instead of red so its in line with the rest of the sprites"
